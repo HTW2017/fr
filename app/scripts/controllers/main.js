@@ -25,16 +25,12 @@ angular.module('frontApp')
     $scope.faceSquareMargin = 50 * $scope.magicNumber;
 
     $scope.register = function() {
-        $('#snap').prop('disabled', false);
-
         var photo = createImages($('#video').get(0), 'register');
         $scope.photos.push(photo);
         uploadImage(photo);
     };
 
     $scope.recognize = function() {
-        $('#snap').prop('disabled', false);
-
         var photo = createImages($('#video').get(0), 'recognize');
         $scope.photos.push(photo);
         uploadImage(photo)
@@ -42,7 +38,7 @@ angular.module('frontApp')
             .then(function() {
                 var scope = $scope.$new();
                 scope.photo = photo;
-                scope.beerList = ['Amber Lager','Bohemian Pilsenser','Pilsener','Küné'];
+                scope.beerList = ['Amber Lager','Bohemian Pilsenser','Pilsener','Küné','Weisse','Session IPA'];
                 scope.beer = scope.beerList[Math.floor(Math.random() * scope.beerList.length)];
 
                 Notification({
@@ -52,12 +48,7 @@ angular.module('frontApp')
     };
 
     function uploadImage(photo) {
-        $('#snap').prop('disabled', true);
-
         uploadingPhotos++;
-
-        $('#snap-take-photo').hide();
-        $('#snap-loading').show();
 
         var uploadInfo = uploadInfoStrategies[photo.type](photo.image.fullImage);
 
@@ -143,9 +134,6 @@ angular.module('frontApp')
             })
             .then(function(p){
                 finishedPhotos++;
-                $('#snap').prop('disabled', false);
-                $('#snap-take-photo').show();
-                $('#snap-loading').hide();
 
                 return p;
             });

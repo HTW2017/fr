@@ -23,6 +23,19 @@ angular.module('frontApp')
     $scope.photos = [];
     $scope.magicNumber = 912 / 272;
     $scope.faceSquareMargin = 50 * $scope.magicNumber;
+    $scope.isFullScreen = false;
+
+    $scope.fullScreen = function() {
+        $scope.isFullScreen = true;
+    };
+
+    $(document).keyup(function(e) {
+         if (e.keyCode == 27) { // escape key maps to keycode `27`
+            $scope.$apply(function() {
+                $scope.isFullScreen = false;
+            });
+        }
+    });
 
     $scope.register = function() {
         var photo = createImages($('#video').get(0), 'register');
@@ -33,18 +46,16 @@ angular.module('frontApp')
     $scope.recognize = function() {
         var photo = createImages($('#video').get(0), 'recognize');
         $scope.photos.push(photo);
-        uploadImage(photo)
-            .catch(function() {})
-            .then(function() {
-                var scope = $scope.$new();
-                scope.photo = photo;
-                scope.beerList = ['Amber Lager','Bohemian Pilsenser','Pilsener','Küné','Weisse','Session IPA'];
-                scope.beer = scope.beerList[Math.floor(Math.random() * scope.beerList.length)];
+        uploadImage(photo);
+        
+        var scope = $scope.$new();
+        scope.photo = photo;
+        scope.beerList = ['Amber Lager','Bohemian Pilsenser','Pilsener','Küné','Weisse','Session IPA'];
+        scope.beer = scope.beerList[Math.floor(Math.random() * scope.beerList.length)];
 
-                Notification({
-                    scope: scope 
-                });
-            });
+        Notification({
+            scope: scope 
+        });
     };
 
     function uploadImage(photo) {

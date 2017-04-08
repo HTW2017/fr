@@ -31,7 +31,7 @@ angular
   })
   .config(function (NotificationProvider) {
     NotificationProvider.setOptions({
-      delay: 2000,
+      delay: 10000,
       startTop: 20,
       startRight: 20,
       verticalSpacing: 20,

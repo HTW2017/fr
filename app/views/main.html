@@ -23,8 +23,35 @@
                             </button>
                         </div>
                         <div style="margin-top: 10px; text-align: left;" class="form-group" id="thumbnails">
-                            <div ng-repeat='photo in photos' id="group-{{ photo.id }}" ng-style="photo.thumbnailImage" class="photo-group" style="display: inline-block; margin: 0 5px; position: relative;">
-                                <img id="thumbnail-{{ photo.id }}" ng-src="data:image/jpeg;charset=utf-8;base64,{{ photo.image.fullImage }}" width="{{ photo.thumbnailImage.width }}" height="{{ photo.thumbnailImage.height }}"/>
+                            <div ng-repeat='photo in photos'
+                                 id="group-{{ photo.id }}"
+                                 class="photo-group"
+                                 style="display: inline-block;margin: 0 5px; position: relative;"
+                                 ng-style="{
+                                    width: photo.thumbnailImage.width,
+                                    height: photo.thumbnailImage.height
+                                }">
+                                <div style="display: block; position: absolute; z-index: 10; background: rgba(0,0,0,0.5); text-align: left;">
+                                    <span ng-if="photo.status === 'uploaded'" style="line-height: 30px; color: #FFF; margin: 10px;">{{ photo.externalImage.transaction.subject_id }}</span>
+                                    <span ng-if="photo.status === 'loading'" style="line-height: 30px; color: #FFF; margin: 10px;">Uploading</span>
+                                    <span ng-if="photo.status === 'failed'" style="line-height: 30px; color: #FFF; margin: 10px;">{{ photo.errors[0] }}</span>
+                                </div>
+                                <div ng-style="{
+                                        width: photo.thumbnailImage.width,
+                                        height: photo.thumbnailImage.height
+                                    }"
+                                    style="overflow: hidden; position: relative;">
+
+                                    <img id="thumbnail-{{ photo.id }}"
+                                         height="{{ photo.thumbnailSize.height }}" 
+                                         width="{{ photo.thumbnailSize.width }}" 
+                                         ng-src="data:image/jpeg;charset=utf-8;base64,{{ photo.image.fullImage }}"
+                                         style="position: absolute;"
+                                         ng-style="{
+                                            top: '-' + photo.thumbnailImage.top,
+                                            left: '-' + photo.thumbnailImage.left,
+                                         }"/>
+                                </div>
                             </div>
                         </div>
                         <div id="imageContainer" style="display: none;">

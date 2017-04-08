@@ -14,13 +14,15 @@ var PHOTO_STATUSES = {
  * Controller of the frontApp
  */
 angular.module('frontApp')
-  .controller('MainCtrl', function ($scope, $http) {
+  .controller('MainCtrl', function ($scope, $http, Notification) {
     if (!hasGetUserMedia()) {
         alert('Browser not supported to take pictures');
         return;
     }
 
     $scope.photos = [];
+    $scope.magicNumber = 912 / 272;
+    $scope.faceSquareMargin = 50 * $scope.magicNumber;
 
     $scope.register = function() {
         $('#snap').prop('disabled', false);
@@ -35,7 +37,18 @@ angular.module('frontApp')
 
         var photo = createImages($('#video').get(0), 'recognize');
         $scope.photos.push(photo);
-        uploadImage(photo);
+        uploadImage(photo)
+            .catch(function() {})
+            .then(function() {
+                var scope = $scope.$new();
+                scope.photo = photo;
+                scope.beerList = ['Amber Lager','Bohemian Pilsenser','Pilsener','Küné'];
+                scope.beer = scope.beerList[Math.floor(Math.random() * scope.beerList.length)];
+
+                Notification({
+                    scope: scope 
+                });
+            });
     };
 
     function uploadImage(photo) {
@@ -55,6 +68,7 @@ angular.module('frontApp')
                 data: uploadInfo.body
             })
             .then(function(resp){
+                var correction;
                 if (resp.data.Errors) {
                     var e = new Error('request_error');
                     e.resp = resp;
@@ -66,13 +80,60 @@ angular.module('frontApp')
                 var img = resp.data.images[0];
                 photo.externalId = img.transaction.face_id;
                 photo.externalImage = img;
-                //showRealImage(photo, resp.filename);
+                photo.faceSquare = {
+                    top: Math.max(img.transaction.topLeftY - $scope.faceSquareMargin, 0),
+                    left: Math.max(img.transaction.topLeftX - $scope.faceSquareMargin, 0),
+                    height: img.transaction.height + $scope.faceSquareMargin * 2,
+                    width: img.transaction.width + $scope.faceSquareMargin * 2
+                };
+                photo.faceSquare.height = Math.min(photo.faceSquare.height, photoHeight - photo.faceSquare.top); 
+                photo.faceSquare.width = Math.min(photo.faceSquare.width, photoWidth - photo.faceSquare.left);
+
+                if (photo.faceSquare.height > photo.faceSquare.width) {
+                    correction = (photo.faceSquare.height - photo.faceSquare.width) / 2;
+                    photo.faceSquare.height -= photo.faceSquare.width;
+                    photo.faceSquare.top += correction;
+                }
+                else {
+                    correction = (photo.faceSquare.width - photo.faceSquare.height) / 2;
+                    photo.faceSquare.width = photo.faceSquare.height;
+                    photo.faceSquare.left += correction;
+                }
+
+                var thumbnailFinalSize = 100;
+                var thumbnailResizeProportion = thumbnailFinalSize / photo.faceSquare.width;
+                photo.thumbnailSize = {
+                    width: thumbnailWidth * thumbnailResizeProportion * $scope.magicNumber + 'px',
+                    height: thumbnailHeight * thumbnailResizeProportion * $scope.magicNumber + 'px',
+                };
+
+                photo.thumbnailImage = {
+                    top: photo.faceSquare.top * thumbnailResizeProportion + 'px',
+                    left: photo.faceSquare.left * thumbnailResizeProportion + 'px',
+                    width: thumbnailFinalSize + 'px',
+                    height: thumbnailFinalSize + 'px',
+                };
+
+                if (resp.data.images && resp.data.images.length > 0 && resp.data.images[0].transaction.status == 'failure') {
+                    var e = new Error('request_error');
+                    e.resp = resp;
+                    throw e;
+                }
+
+                return photo;
             })
             .catch(function (e) {
                 photo.status = PHOTO_STATUSES.failed;
 
+                
                 if (e.message === 'request_error') {
-                    photo.errors = e.resp.data.Errors.map(function (e) { return e.Message; });
+                    if (e.resp.data.images && e.resp.data.images.length > 0 && e.resp.data.images[0].transaction.status == 'failure') {
+                        photo.errors = ['No match'];
+                        throw e;
+                    }
+                    else {
+                        photo.errors = e.resp.data.Errors.map(function (e) { return e.Message; });
+                    }
                     console.log(photo.errors);
                 }
                 else {
@@ -80,17 +141,18 @@ angular.module('frontApp')
                     console.error(e);
                 }
             })
-            .then(function(){
+            .then(function(p){
                 finishedPhotos++;
                 $('#snap').prop('disabled', false);
                 $('#snap-take-photo').show();
                 $('#snap-loading').hide();
+
+                return p;
             });
     }
 
 
     function createImages(video, type) {
-        var tw = 272, th = 153;
         var uniq = (new Date()).getTime();
 
         var $container = $('#imageContainer');
@@ -118,8 +180,14 @@ angular.module('frontApp')
             type: type,
             status: PHOTO_STATUSES.loading,
             thumbnailImage: {
-                width: tw + ' px',
-                height: th + ' px'
+                width: thumbnailWidth + 'px',
+                height: thumbnailHeight + 'px',
+                top: 0 + 'px',
+                left: 0 + 'px',
+            },
+            thumbnailSize: {
+                width: thumbnailWidth + 'px',
+                height: thumbnailHeight + 'px',
             },
             image: {
                 contentType: contentType,
@@ -138,6 +206,8 @@ angular.module('frontApp')
 var resolutions = [
     {width: 912, height: 513}
 ];
+var thumbnailWidth = 272;
+var thumbnailHeight = 153;
 var photoWidth = resolutions[0].width, photoHeight = resolutions[0].height;
 var uploadingPhotos = 0;
 var finishedPhotos = 0;
@@ -190,38 +260,6 @@ function record(resolution) {
         });
 }
 // -------------------- END RECORDING -------------------------------
-
-function backAvailable() {
-    var allPhotosFinished = uploadingPhotos === finishedPhotos;
-
-    return allPhotosFinished;
-}
-
-function finishAvailable() {
-    var allPhotosFinished = uploadingPhotos === finishedPhotos;
-    return allPhotosFinished && succeedPhotos >= 1;
-}
-
-function showRealImage(photo, filename) {
-    photo.img.attr('src', imgBaseUrl + filename);
-    photo.img.show();
-    photo.img.css({'display': 'block'});
-
-    photo.delete.data('photo-id', photo.id);
-    photo.delete.show();
-    photo.delete.css({'display': 'block'});
-
-
-    photo.thumbnail.remove();
-    photo.fullImage.remove();
-    photo.fail.remove();
-    photo.loading.remove();
-
-    delete photo.thumbnail;
-    delete photo.fullImage;
-    delete photo.fail;
-    delete photo.loading;
-}
 
 var uploadInfoStrategies = {
     recognize: function(photo) {

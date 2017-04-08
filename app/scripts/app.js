@@ -15,7 +15,8 @@ angular
     'ngResource',
     'ngRoute',
     'ngSanitize',
-    'ngTouch'
+    'ngTouch',
+    'ui-notification'
   ])
   .config(function ($routeProvider) {
     $routeProvider
@@ -27,4 +28,16 @@ angular
       .otherwise({
         redirectTo: '/'
       });
+  })
+  .config(function (NotificationProvider) {
+    NotificationProvider.setOptions({
+      delay: 2000,
+      startTop: 20,
+      startRight: 20,
+      verticalSpacing: 20,
+      horizontalSpacing: 20,
+      positionX: 'right',
+      positionY: 'top',
+      templateUrl: 'views/notification.html'
+    });
   });

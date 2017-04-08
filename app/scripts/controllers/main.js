@@ -70,8 +70,15 @@ angular.module('frontApp')
             })
             .catch(function (e) {
                 photo.status = PHOTO_STATUSES.failed;
-                photo.errors = e.resp.data.Errors.map(function (e) { return e.Message; });
-                console.log(photo.errors);
+
+                if (e.message === 'request_error') {
+                    photo.errors = e.resp.data.Errors.map(function (e) { return e.Message; });
+                    console.log(photo.errors);
+                }
+                else {
+                    photo.errors = [e.data.message];
+                    console.error(e);
+                }
             })
             .then(function(){
                 finishedPhotos++;
@@ -129,7 +136,7 @@ angular.module('frontApp')
 
 // -------------------- RECORDING -------------------------------
 var resolutions = [
-    {width: 1040, height: 585}
+    {width: 912, height: 513}
 ];
 var photoWidth = resolutions[0].width, photoHeight = resolutions[0].height;
 var uploadingPhotos = 0;

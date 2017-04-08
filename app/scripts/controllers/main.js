@@ -24,6 +24,7 @@ angular.module('frontApp')
     $scope.magicNumber = 912 / 272;
     $scope.faceSquareMargin = 50 * $scope.magicNumber;
     $scope.isFullScreen = false;
+    $scope.registerName = 'Alan';
 
     $scope.fullScreen = function() {
         $scope.isFullScreen = true;
@@ -39,6 +40,7 @@ angular.module('frontApp')
 
     $scope.register = function() {
         var photo = createImages($('#video').get(0), 'register');
+        photo.registerName = $scope.registerName;
         $scope.photos.push(photo);
         uploadImage(photo);
     };
@@ -61,8 +63,8 @@ angular.module('frontApp')
     function uploadImage(photo) {
         uploadingPhotos++;
 
-        var uploadInfo = uploadInfoStrategies[photo.type](photo.image.fullImage);
-
+        var uploadInfo = uploadInfoStrategies[photo.type](photo);
+        console.log(uploadInfo);
         return $http({
                 method: 'POST',
                 url: uploadInfo.url,
@@ -270,7 +272,7 @@ var uploadInfoStrategies = {
             },
             body: {
                 "gallery_name": kairosGalleryId,
-                "image": photo
+                "image": photo.image.fullImage
             }
         };
     },
@@ -282,9 +284,9 @@ var uploadInfoStrategies = {
                 "app_key": kairosApiKey
             },
             body: {
-                "subject_id": "Alan",
+                "subject_id": photo.registerName,
                 "gallery_name": kairosGalleryId,
-                "image": photo
+                "image": photo.image.fullImage
             }
         };
     },

@@ -1,5 +1,11 @@
 'use strict';
 
+var PHOTO_STATUSES = {
+    loading: 'loading',
+    failed: 'failed',
+    uploaded: 'uploaded'
+};
+
 /**
  * @ngdoc function
  * @name frontApp.controller:MainCtrl
@@ -8,29 +14,131 @@
  * Controller of the frontApp
  */
 angular.module('frontApp')
-  .controller('MainCtrl', function () {
+  .controller('MainCtrl', function ($scope, $http) {
     if (!hasGetUserMedia()) {
         alert('Browser not supported to take pictures');
         return;
     }
 
-    $('#snap').on('click', takePhoto);
-    $('.delete-button').on('click', deletePhoto);
+    $scope.photos = [];
 
-    updateButtonState();
+    $scope.register = function() {
+        $('#snap').prop('disabled', false);
+
+        var photo = createImages($('#video').get(0), 'register');
+        $scope.photos.push(photo);
+        uploadImage(photo);
+    };
+
+    $scope.recognize = function() {
+        $('#snap').prop('disabled', false);
+
+        var photo = createImages($('#video').get(0), 'recognize');
+        $scope.photos.push(photo);
+        uploadImage(photo);
+    };
+
+    function uploadImage(photo) {
+        $('#snap').prop('disabled', true);
+
+        uploadingPhotos++;
+
+        $('#snap-take-photo').hide();
+        $('#snap-loading').show();
+
+        var uploadInfo = uploadInfoStrategies[photo.type](photo.image.fullImage);
+
+        return $http({
+                method: 'POST',
+                url: uploadInfo.url,
+                headers: uploadInfo.headers,
+                data: uploadInfo.body
+            })
+            .then(function(resp){
+                if (resp.data.Errors) {
+                    var e = new Error('request_error');
+                    e.resp = resp;
+                    throw e;
+                }
+
+                succeedPhotos++;
+                photo.status = PHOTO_STATUSES.uploaded;
+                var img = resp.data.images[0];
+                photo.externalId = img.transaction.face_id;
+                photo.externalImage = img;
+                //showRealImage(photo, resp.filename);
+            })
+            .catch(function (e) {
+                photo.status = PHOTO_STATUSES.failed;
+                photo.errors = e.resp.data.Errors.map(function (e) { return e.Message; });
+                console.log(photo.errors);
+            })
+            .then(function(){
+                finishedPhotos++;
+                $('#snap').prop('disabled', false);
+                $('#snap-take-photo').show();
+                $('#snap-loading').hide();
+            });
+    }
+
+
+    function createImages(video, type) {
+        var tw = 272, th = 153;
+        var uniq = (new Date()).getTime();
+
+        var $container = $('#imageContainer');
+
+        $container.prepend(
+            '<div id="group-'+uniq+'" class="photo-group" style="display: inline-block; margin: 0 5px; position: relative;">' +
+                '<canvas id="full-'+uniq+'" width="'+ photoWidth +'" height="'+ photoHeight +'" style="display: none; opacity: 0;"></canvas>' +
+            '</div>');
+
+        var $group = $container.find('#group-' + uniq);
+        var $fullImage = $group.find('#full-' + uniq);
+
+        var fullImageContext = $fullImage.get(0).getContext('2d');
+        fullImageContext.drawImage(video, 0, 0, photoWidth, photoHeight);
+
+        var img = $fullImage.get(0).toDataURL('image/jpeg', 0.8);
+        var contentType = 'image/jpeg';
+        var encoding = 'base64';
+        var fullImage = img.slice(23);
+
+        $group.html('');
+
+        var photo = {
+            id: uniq,
+            type: type,
+            status: PHOTO_STATUSES.loading,
+            thumbnailImage: {
+                width: tw + ' px',
+                height: th + ' px'
+            },
+            image: {
+                contentType: contentType,
+                encoding: encoding,
+                fullImage: fullImage
+            }
+        };
+
+        return photo;
+    }
+
     startRecord();
   });
 
-
+// -------------------- RECORDING -------------------------------
 var resolutions = [
-    {width: 1280, height: 720}
-    , {width: 1920, height: 1080}
+    {width: 1040, height: 585}
 ];
 var photoWidth = resolutions[0].width, photoHeight = resolutions[0].height;
 var uploadingPhotos = 0;
 var finishedPhotos = 0;
 var succeedPhotos = 0;
-var imgBaseUrl = 'api.kairos.com';
+var kairosGalleryId = 'patagonia';
+var kairosAppId = '07844605';
+var kairosApiKey = '1ec90660a80a6404accd4282099f52d9';
+var imgBaseUrl = 'http://localhost:3000/vision';
 
 function hasGetUserMedia() {
     return navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
@@ -46,49 +154,6 @@ function startRecord() {
     }
 }
 
-function doneObservations() {
-    $('#observations-progress').hide();
-    $('#observations-error').hide();
-    $('#observations-button').show();
-}
-
-function editObservations() {
-    $('#observations').hide();
-    $('#observations-error').hide();
-    $('#observations-button').hide();
-    $('#observations-edit').show().focus();
-}
-
-function saveObservations() {
-    var txt = $('#observations-edit').hide().val();
-    $('#observations').text(txt).show();
-    $('#observations-progress').show();
-    $('#observations-error').hide();
-
-    $.ajax('BASDAS', {
-        type: "post",
-        dataType: 'json',
-        data: {
-            'text': txt
-        }
-    })
-    .done(function(resp){
-        doneObservations();
-    })
-    .fail(function () {
-        $('#observations-progress').hide();
-        $('#observations-error').show();
-        setTimeout(saveObservations, 2000);
-    })
-}
-
-function keyPressObservations(ev) {
-    if (ev.keyCode == 13) {
-        $('#observations-edit').blur();
-        ev.preventDefault();
-    }
-}
-
 function record(resolution) {
     var $video = $('#video');
     var video = $video[0];
@@ -97,11 +162,6 @@ function record(resolution) {
         video: {
             width: { min: resolution.width },
             height: { min: resolution.height },
-            mandatory: {
-                minWidth: resolution.width,
-                minHeight: resolution.height
-            },
-            optional: []
         },
         audio: false
     };
@@ -111,17 +171,18 @@ function record(resolution) {
             video.src = window.URL.createObjectURL(stream);
             video.play();
             setTimeout(function(){
-                $('#snap').enable(true);
+                $('#snap').prop('disabled', false);
             }, 1000);
 
             photoWidth = resolution.width;
             photoHeight = resolution.height;
         })
         .catch(function (err) {
-            console.error(err);
+            console.log(err);
             startRecord();
         });
 }
+// -------------------- END RECORDING -------------------------------
 
 function backAvailable() {
     var allPhotosFinished = uploadingPhotos === finishedPhotos;
@@ -132,11 +193,6 @@ function backAvailable() {
 function finishAvailable() {
     var allPhotosFinished = uploadingPhotos === finishedPhotos;
     return allPhotosFinished && succeedPhotos >= 1;
-}
-
-function updateButtonState() {
-    $('#back').enable(backAvailable());
-    $('#succeed-counter').html(succeedPhotos);
 }
 
 function showRealImage(photo, filename) {
@@ -160,153 +216,37 @@ function showRealImage(photo, filename) {
     delete photo.loading;
 }
 
-function takePhoto() {
-    $('#snap').enable(false);
+var uploadInfoStrategies = {
+    recognize: function(photo) {
+        return {
+            url: imgBaseUrl + '/recognize',
+            headers: {
+                "app_id": kairosAppId,
+                "app_key": kairosApiKey
+            },
+            body: {
+                "gallery_name": kairosGalleryId,
+                "image": photo
+            }
+        };
+    },
+    register: function(photo) {
+        return {
+            url: imgBaseUrl + '/enroll',
+            headers: {
+                "app_id": kairosAppId,
+                "app_key": kairosApiKey
+            },
+            body: {
+                "subject_id": "Alan",
+                "gallery_name": kairosGalleryId,
+                "image": photo
+            }
+        };
+    },
+};
 
-    var video = $('#video').get(0);
-    var $thumbnails = $('#thumbnails');
-    var photo = createImages($thumbnails, video);
-
-    uploadImage(photo);
-}
-
-function uploadImage(photo) {
-    $('#snap').enable(false);
-
-    uploadingPhotos++;
-    updateButtonState();
-
-    var img = photo.fullImage.get(0).toDataURL('image/jpeg', 0.8);
-
-    var contentType = 'image/jpeg';
-    var encoding = 'base64';
-    var fullImage = img.slice(23);
-
-    $('#snap-take-photo').hide();
-    $('#snap-loading').show();
-
-    photo.loading.show();
-    photo.fail.hide();
-
-    $.ajax('ASD', {
-        type: "post",
-        dataType: 'json',
-        data: {
-            'contentType': contentType,
-            'encoding': encoding,
-            'image': fullImage
-        }
-    })
-    .done(function(resp){
-        succeedPhotos++;
-        photo.id = resp.id;
-        showRealImage(photo, resp.filename);
-        updateButtonState();
-    })
-    .fail(function () {
-        photo.fail.show();
-    })
-    .always(function(){
-        if (photo.loading) {
-            photo.loading.hide();
-        }
-
-        finishedPhotos++;
-        updateButtonState();
-        $('#snap').enable(true);
-        $('#snap-take-photo').show();
-        $('#snap-loading').hide();
-    });
-}
-
-function createImages($container, video) {
-    var tw = 266, th = 150;
-    var uniq = (new Date()).getTime();
-
-    $container.prepend(
-    '<div id="group-'+uniq+'" class="photo-group" style="display: inline-block; margin: 0 5px; position: relative;">' +
-        '<div id="loading-'+uniq+'" style="display: block; position: absolute; z-index: 10; width: '+tw+'px; height: '+th+'px; background: rgba(0,0,0,0.5); text-align: center;">' +
-            '<span style="line-height: '+th+'px; color: #FFF; margin: 0 auto;">UPLOADING</span>' +
-        '</div>' +
-        '<div id="failed-'+uniq+'" style="cursor: pointer; display: none; position: absolute; z-index: 10; width: '+tw+'px; height: '+th+'px; background: rgba(255,0,0,0.4); text-align: center;">' +
-            '<span style="line-height: '+th+'px; color: #FFF; margin: 0 auto;">FAILED</span>' +
-        '</div>' +
-        '<div id="delete-'+ uniq +'" class="delete-button" style="display: none; z-index: 30; cursor: pointer; position: absolute; width: 25px; height: 25px; background: rgba(0,0,0,.8); font-size: 20px; line-height: 25px; text-align: center; color: white; right: 0;">' +
-            '&times;' +
-        '</div>' +
-        '<img data-toggle="modal" data-target="#large-photo-modal" id="img-'+uniq+'" width="'+tw+'" height="'+th+'" style="display: none; z-index: 20; cursor: zoom-in;"/>' +
-        '<canvas id="thumbnail-'+uniq+'" width="'+tw+'" height="'+th+'"></canvas>' +
-        '<canvas id="full-'+uniq+'" width="'+ photoWidth +'" height="'+ photoHeight +'" style="display: none; opacity: 0;"></canvas>' +
-    '</div>');
-
-    var $group = $container.find('#group-' + uniq);
-    var $thumbnail = $group.find('#thumbnail-' + uniq);
-    var $fullImage = $group.find('#full-' + uniq);
-    var $fail = $group.find('#failed-' + uniq);
-    var $loading = $group.find('#loading-' + uniq);
-    var $img = $group.find('#img-' + uniq);
-    var $delete = $group.find('#delete-' + uniq);
-
-    var thumbContext = $thumbnail.get(0).getContext('2d');
-    var fullImageContext = $fullImage.get(0).getContext('2d');
-    thumbContext.drawImage(video, 0, 0, tw, th);
-    fullImageContext.drawImage(video, 0, 0);
-
-    $delete.on('click', deletePhoto);
-
-    var photo = {
-        'id': uniq,
-        'group': $group,
-        'thumbnail': $thumbnail,
-        'fullImage': $fullImage,
-        'fail': $fail,
-        'loading': $loading,
-        'img': $img,
-        'delete': $delete
-    };
-
-    photo.fail.on('click', function(){
-        uploadImage(photo);
-    })
-
-    return photo;
-}
-
-function deletePhoto() {
-    var $elem = $(this);
-    var photoId = $elem.data('photo-id');
-
-    if ($elem.data('loading')) {
-        return;
-    }
-    $elem.data('loading', true);
-
-    $elem.html('<i class="fa fa-spin fa-spinner"></i>');
-    uploadingPhotos++;
-    updateButtonState();
-
-    var route = '124';
-    console.log(route.replace('--ID--', photoId));
-    $.ajax(route.replace('--ID--', photoId), {
-        type: "delete",
-        dataType: 'json'
-    })
-    .done(function(){
-        succeedPhotos--;
-        $elem.parents('.photo-group').remove();
-        updateButtonState();
-    })
-    .fail(function () {
-        $elem.html('&times;');
-    })
-    .always(function(){
-        finishedPhotos++;
-        updateButtonState();
-        $elem.data('loading', false);
-    });
-}
-
-
+// ------------------------- COMPATIBILITY THINGS -----------
 var promisifiedOldGUM = function(constraints) {
     // First get ahold of getUserMedia, if present
     var getUserMedia = (navigator.getUserMedia ||

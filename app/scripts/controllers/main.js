@@ -137,19 +137,16 @@ angular.module('frontApp')
                 
                 if (e.message === 'request_error') {
                     if (e.resp.data.images && e.resp.data.images.length > 0 && e.resp.data.images[0].transaction.status == 'failure') {
-                        // photo.errors = ['No match'];
-                        photo.errors = ['Alan'];
+                        photo.errors = ['No match'];
                         throw e;
                     }
                     else {
-                        // photo.errors = e.resp.data.Errors.map(function (e) { return e.Message; });
-                        photo.errors = ['Alan'];                        
+                        photo.errors = e.resp.data.Errors.map(function (e) { return e.Message; });
                     }
                     console.log(photo.errors);
                 }
                 else {
-                    // photo.errors = [e.data.message];
-                    photo.errors = ['Alan'];
+                    photo.errors = [e.data.message];
 
                     console.error(e);
                 }

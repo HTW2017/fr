@@ -14,7 +14,7 @@ var PHOTO_STATUSES = {
  * Controller of the frontApp
  */
 angular.module('frontApp')
-  .controller('MainCtrl', function ($scope, $http, Notification) {
+  .controller('MainCtrl', function ($scope, $http, Notification, $window) {
     if (!hasGetUserMedia()) {
         alert('Browser not supported to take pictures');
         return;
@@ -215,7 +215,34 @@ angular.module('frontApp')
         return extractImage($canvas, quality - 0.05);
     }
 
-    startRecord();
+    function initFaceTracking() {
+        var video = document.getElementById('video');
+        var canvas = document.getElementById('canvas');
+        var context = canvas.getContext('2d');
+        var tracker = new $window.tracking.ObjectTracker('face');
+        tracker.setInitialScale(4);
+        tracker.setStepSize(2);
+        tracker.setEdgesDensity(0.1);
+
+        tracking.track('#video', tracker, {
+            camera: true,
+            video: {
+                width: { min: photoWidth },
+                height: { min: photoHeight },
+            }
+        });
+
+        tracker.on('track', function(event) {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            event.data.forEach(function(rect) {
+                context.strokeStyle = '#5cb85c';
+                context.lineWidth = 3;
+                context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+            });
+        });
+    };
+    initFaceTracking();
+    // startRecord();
   });
 
 // -------------------- RECORDING -------------------------------

@@ -8,7 +8,7 @@
                             <div class="col-xs-12"><h4>Foto time</h4></div>
                         </div>
 
-                        <div style="margin: 10px auto; width: 622px; height: 50px;">
+                        <div class="col-xs-12" style="margin: 10px auto; width: 622px; height: 50px;">
                             <button class="btn btn-primary btn-lg" id="snap" ng-click="register()" style="display: inline-block; float: right;">
                                 <span id="snap-take-photo">Registrar</span>
                                 <span id="snap-loading" style="display: none;">Loading</span>
@@ -16,21 +16,20 @@
                             <input type="text" ng-model="registerName">
                         </div>
 
-                        <div>
+                        <div class="col-xs-12" style="padding: 0;" ng-class="{'full-screen': isFullScreen}">
                             <video ng-click="recognize()"
                                     id="video"
                                     autoplay
                                     height="360"
                                     width="640"
-                                    style="display: block; margin: 0 auto;"
-                                    ng-class="{
-                                        'full-screen': isFullScreen
-                                    }">            
+                                    style="display: block; margin: 0; z-index: 20;"
+                                    ng-class="{'full-screen': isFullScreen}">            
                             </video>
-                            <div ng-if="isFullScreen" style="position: fixed; background: #000; top: 0; left: 0; width: 100vw; height: 100vh;"></div>
+                            <canvas style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 25;" id="canvas" width="640" height="360" ng-class="{'full-screen': isFullScreen}"></canvas>
+                            <div ng-if="isFullScreen" style="position: fixed; background: #FFF; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 15;"></div>
                         </div>
 
-                        <div style="margin: 10px auto; width: 622px; height: 50px;">
+                        <div  class="col-xs-12" style="margin: 10px auto; width: 622px; height: 50px;">
                             
                             <button class="btn btn-warning btn-lg" id="snap" ng-click="recognize()" style="display: inline-block; float: right; margin-right: 10px;">
                                 <span id="snap-take-photo">Reconocer</span>
@@ -40,7 +39,7 @@
                                 <span>Full Screen</span>
                             </button>
                         </div>
-                        <div style="margin-top: 10px; text-align: left;" class="form-group" id="thumbnails">
+                        <div class="col-xs-12"  style="margin-top: 10px; text-align: left;" class="form-group" id="thumbnails">
                             <div ng-repeat='photo in photos'
                                  id="group-{{ photo.id }}"
                                  class="photo-group"
@@ -74,7 +73,10 @@
                         </div>
                         <div id="imageContainer" style="display: none;">
                         </div>
+                        <div class="col-xs-12" >
                         <pre>{{ photos|json }}</pre>
+                        </div>
+
                     </div>
                 </div>
             </div>

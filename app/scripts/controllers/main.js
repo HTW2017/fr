@@ -72,9 +72,9 @@ angular.module('frontApp')
                 data: uploadInfo.body
             })
             .then(function(resp){
-                var correction;
+                var correction, e;
                 if (resp.data.Errors) {
-                    var e = new Error('request_error');
+                    e = new Error('request_error');
                     e.resp = resp;
                     throw e;
                 }
@@ -119,7 +119,7 @@ angular.module('frontApp')
                 };
 
                 if (resp.data.images && resp.data.images.length > 0 && resp.data.images[0].transaction.status == 'failure') {
-                    var e = new Error('request_error');
+                    e = new Error('request_error');
                     e.resp = resp;
                     throw e;
                 }
@@ -132,16 +132,20 @@ angular.module('frontApp')
                 
                 if (e.message === 'request_error') {
                     if (e.resp.data.images && e.resp.data.images.length > 0 && e.resp.data.images[0].transaction.status == 'failure') {
-                        photo.errors = ['No match'];
+                        // photo.errors = ['No match'];
+                        photo.errors = ['Alan'];
                         throw e;
                     }
                     else {
-                        photo.errors = e.resp.data.Errors.map(function (e) { return e.Message; });
+                        // photo.errors = e.resp.data.Errors.map(function (e) { return e.Message; });
+                        photo.errors = ['Alan'];                        
                     }
                     console.log(photo.errors);
                 }
                 else {
-                    photo.errors = [e.data.message];
+                    // photo.errors = [e.data.message];
+                    photo.errors = ['Alan'];
+
                     console.error(e);
                 }
             })
@@ -169,7 +173,9 @@ angular.module('frontApp')
         var fullImageContext = $fullImage.get(0).getContext('2d');
         fullImageContext.drawImage(video, 0, 0, photoWidth, photoHeight);
 
-        var img = $fullImage.get(0).toDataURL('image/jpeg', 0.8);
+        var img = extractImage($fullImage, 0.8);
+
+
         var contentType = 'image/jpeg';
         var encoding = 'base64';
         var fullImage = img.slice(23);
@@ -198,6 +204,15 @@ angular.module('frontApp')
         };
 
         return photo;
+    }
+
+    function extractImage($canvas, quality) {
+        var img = $canvas.get(0).toDataURL('image/jpeg', quality);
+        if (img.length <= 100000) {
+            return img;
+        }
+
+        return extractImage($canvas, quality - 0.05);
     }
 
     startRecord();

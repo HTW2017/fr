@@ -5,34 +5,37 @@
     <div ng-if="photo.status === 'loading'" style="height: 100px;display: inline-block;width: 200px;">
         <p style="padding: 5px 10px;font-size: 16px;">Loading</p>
     </div>
-    <div ng-if="photo.status !== 'loading'"
-         id="group-{{ photo.id }}"
-         class="photo-group"
-         style="margin: 0; position: relative; float: left;"
-         ng-style="{
-            width: photo.thumbnailImage.width,
-            height: photo.thumbnailImage.height
-        }">
-        <div style="display: block; position: absolute; z-index: 10; background: rgba(0,0,0,0.5); text-align: left;">
-            <span ng-if="photo.status === 'uploaded'" style="line-height: 30px; color: #FFF; margin: 10px;">{{ photo.externalImage.transaction.subject_id }}</span>
-            <span ng-if="photo.status === 'loading'" style="line-height: 30px; color: #FFF; margin: 10px;">Uploading image</span>
-            <span ng-if="photo.status === 'failed'" style="line-height: 30px; color: #FFF; margin: 10px;">{{ photo.errors[0] }}</span>
-        </div>
-        <div ng-style="{
+    <div style="overflow: hidden; width: 100px; height: 100px; margin: 0; position: relative; float: left;">
+        <div ng-if="photo.status !== 'loading'"
+             id="group-{{ photo.id }}"
+             class="photo-group"
+             style="margin: 0; position: relative; float: left;"
+             ng-style="{
                 width: photo.thumbnailImage.width,
                 height: photo.thumbnailImage.height
-            }"
-            style="overflow: hidden; position: relative;">
+            }">
+            <div style="display: block; position: absolute; z-index: 10; background: rgba(0,0,0,0.5); text-align: left;">
+                <span ng-if="photo.status === 'uploaded'" style="line-height: 30px; color: #FFF; margin: 10px;">{{ photo.externalImage.transaction.subject_id }}</span>
+                <span ng-if="photo.status === 'loading'" style="line-height: 30px; color: #FFF; margin: 10px;">Uploading image</span>
+                <span ng-if="photo.status === 'failed'" style="line-height: 30px; color: #FFF; margin: 10px;">{{ photo.errors[0] }}</span>
+            </div>
+            <div ng-style="{
+                    width: photo.thumbnailImage.width,
+                    height: photo.thumbnailImage.height
+                 }"
+                 ng-if="photo.faceSquare"
+                 style="overflow: hidden; position: relative;">
 
-            <img id="thumbnail-{{ photo.id }}"
-                 height="{{ photo.thumbnailSize.height }}" 
-                 width="{{ photo.thumbnailSize.width }}" 
-                 ng-src="data:image/jpeg;charset=utf-8;base64,{{ photo.image.fullImage }}"
-                 style="position: absolute;"
-                 ng-style="{
-                    top: '-' + photo.thumbnailImage.top,
-                    left: '-' + photo.thumbnailImage.left,
-                 }"/>
+                <img id="thumbnail-{{ photo.id }}"
+                     height="{{ photo.thumbnailSize.height }}" 
+                     width="{{ photo.thumbnailSize.width }}" 
+                     ng-src="data:image/jpeg;charset=utf-8;base64,{{ photo.image.fullImage }}"
+                     style="position: absolute;"
+                     ng-style="{
+                        top: '-' + photo.thumbnailImage.top,
+                        left: '-' + photo.thumbnailImage.left,
+                     }"/>
+            </div>
         </div>
     </div>
     <div style="height: 100px;display: inline-block;width: 200px;" ng-if="photo.status !== 'loading'">

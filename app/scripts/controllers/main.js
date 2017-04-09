@@ -49,7 +49,7 @@ angular.module('frontApp')
         var photo = createImages($('#video').get(0), 'recognize');
         $scope.photos.push(photo);
         uploadImage(photo);
-        
+
         var scope = $scope.$new();
         scope.photo = photo;
         scope.beerList = ['Amber Lager','Bohemian Pilsenser','Pilsener','Küné','Weisse','Session IPA'];

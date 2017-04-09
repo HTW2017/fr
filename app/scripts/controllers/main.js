@@ -31,9 +31,14 @@ angular.module('frontApp')
     };
 
     $(document).keyup(function(e) {
-         if (e.keyCode == 27) { // escape key maps to keycode `27`
+        if (e.keyCode == 27) { // escape key maps to keycode `27`
             $scope.$apply(function() {
                 $scope.isFullScreen = false;
+            });
+        }
+        if (e.keyCode == 32) {
+            $scope.$apply(function() {
+                $scope.recognize();
             });
         }
     });
